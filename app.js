@@ -1,5 +1,4 @@
 var request = require('request');
-var rp = require('request-promise');
 var express = require('express');
 var cheerio = require('cheerio');
 var app = express();
@@ -26,10 +25,10 @@ app.get('/propertyPhoto/:address', function (req, res) {
         .then(redfinURL => getImageUrl(redfinURL))
         .then(imgUrl => buildResponse(imgUrl))
         .then(keithResponse => res.status(200).send(keithResponse))
-        .catch(err => res.status(500).send());
+        .catch(err => res.status(500).send(err));
 });
 
-app.listen(3000, function() {
+app.listen(3000, function () {
     console.log("Started on PORT 3000");
 });
 
@@ -40,22 +39,37 @@ function buildRequest(address) {
     return redURL;
 }
 
-async function makeRedfinRequest(redfinRequest) {
+function makeRedfinRequest(redfinRequest) {
     var redImgUrl = 'https://www.redfin.com';
 
-    const body = await rp(redfinRequest);
-    var jsonObject = JSON.parse(body.slice(4));
-    redImgUrl = redImgUrl + jsonObject.payload.sections[0].rows[0].url;
-    return redImgUrl;
+    return new Promise(resolve => {
+        request({ url: redfinRequest }, function (err, response, body) {
+            if (err) { console.log(err); return; }
+            resolve(body);
+        })
+    }).then(body => {
+        var jsonObject = JSON.parse(body.slice(4));
+        try { redImgUrl = redImgUrl + jsonObject.payload.sections[0].rows[0].url; }
+        catch (err) { throw 'address not found'; }
+        return redImgUrl;
+    })
 }
 
-async function getImageUrl(redImgUrl) {
-    const body = await rp(redImgUrl);
-    var imgUrl = cheerio('.img-card', body).attr().src;
-    return imgUrl;
+function getImageUrl(redImgUrl) {
+    return new Promise(resolve => {
+        request({ url: redImgUrl }, function (err, response, body) {
+            if (err) { console.log(err); return; }
+            resolve(body);
+        })
+    }).then(body => {
+        var imgUrl = cheerio('.img-card', body).attr().src;
+        return imgUrl;
+    })
 }
 
 function buildResponse(imgUrl) {
+    imgUrl = imgUrl.replace('mbpaddedwide', 'bigPhoto');
+    imgUrl = imgUrl.replace('genMid\.', '');
     var keithResponse = {
         url: imgUrl
     };
