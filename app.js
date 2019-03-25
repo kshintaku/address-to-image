@@ -43,12 +43,14 @@ app.listen(3000, function () {
 //     .then(realAddUrl => getRealImageUrl(realAddUrl)
 //     .then(imgUrl => console.log(imgUrl)));
 
+
 function buildRequest(address) {
     var redfinURL = 'https://www.redfin.com/stingray/do/location-autocomplete?'
     var redURL = redfinURL + 'location=' + address;
     redURL = redURL + '&start=0&count=10&v=2&market=socal&al=1&iss=false&ooa=true&mrs=false&region_id=37626&region_type=2';
     return redURL;
 }
+
 
 function makeRedfinRequest(redfinRequest) {
     var redImgUrl = 'https://www.redfin.com';
@@ -78,6 +80,7 @@ function getImageUrl(redImgUrl) {
     })
 }
 
+
 function buildResponse(imgUrl) {
     imgUrl = imgUrl.replace('mbpaddedwide', 'bigPhoto');
     imgUrl = imgUrl.replace('genMid\.', '');
@@ -86,6 +89,7 @@ function buildResponse(imgUrl) {
     };
     return keithResponse;
 }
+
 
 function makeZillowRequest(address) {
     // var zilUrl = 'https://www.zillow.com/search/RealEstateSearch.htm?citystatezip=';
@@ -110,7 +114,6 @@ function makeZillowRequest(address) {
         }
     };
 
-
     return new Promise(resolve => {
         request(options, function (err, response, body) {
             // request({ url: zilUrl }, function (err, response, body) {
@@ -123,6 +126,7 @@ function makeZillowRequest(address) {
         return imgUrl;
     })
 }
+
 
 function makeRealtorRequest(address) {
     var realUrl = 'https://www.realtor.com/api/v1/geo-landing/parser/suggest/?input=' + address;
@@ -137,10 +141,10 @@ function makeRealtorRequest(address) {
         var jsonObject = JSON.parse(body);
         try { realAddUrl = realAddUrl + jsonObject.result[0].mpr_id; }
         catch (err) { throw 'address not found'; }
-        console.log(realAddUrl);
         return realAddUrl;
     })
 }
+
 
 function getRealImageUrl(realAddUrl) {
     return new Promise(resolve => {
@@ -149,8 +153,37 @@ function getRealImageUrl(realAddUrl) {
             resolve(body);
         })
     }).then(body => {
-        // console.log(body);
         var imgUrl = cheerio('.modal-heroimg', body).children()[0].attribs.src;
         return imgUrl;
+    })
+}
+
+
+function makeHomeSnapRequest(address) {
+    var homeSnapUrl = 'https://www.homesnap.com/service/Misc/Search'
+    var options = {
+        method: 'GET',
+        url: homeSnapUrl,
+        body: {
+            text: address,
+            polygonType: 1,
+            skip: 0,
+            take: 8,
+            submit: false
+        }
+    };
+
+    return new Promise(resolve => {
+        request(options, function (err, response, body) {
+            // request({ url: zilUrl }, function (err, response, body) {
+            if (err) { console.log(err); return; }
+            console.log(body);
+            resolve(body);
+        })
+    }).then(body => {
+        var jsonObject = JSON.parse(body);
+        try { realAddUrl = realAddUrl + jsonObject.result[0].mpr_id; }
+        catch (err) { throw 'address not found'; }
+        return realAddUrl;
     })
 }
