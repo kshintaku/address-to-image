@@ -19,8 +19,8 @@ var redfinObject = {
 };
 
 var zillowAddress = '2248+w+230th';
-var realAddress = '4242%2520Locust%2520Ave%252C%2520Long%2520Beach%252C%2520CA%252C%252090807&area_types=address&area_types=neighborhood&area_types=city&area_types=county&area_types=postal_code&area_types=street'
-
+var realAddress = '4242%2520Locust%2520Ave%252C%2520Long%2520Beach%252C%2520CA%252C%252090807&area_types=address&area_types=neighborhood&area_types=city&area_types=county&area_types=postal_code&area_types=street';
+var homeSnapAddress = '20955 Brighton';
 app.get('/propertyPhoto/:address', function (req, res) {
     const address = req.params.address;
     console.log('Address received: ' + address);
@@ -42,6 +42,10 @@ app.listen(3000, function () {
 // makeRealtorRequest(realAddress)
 //     .then(realAddUrl => getRealImageUrl(realAddUrl)
 //     .then(imgUrl => console.log(imgUrl)));
+
+// makeHomeSnapRequest(homeSnapAddress)
+//     .then(homeSnapImgUrl => getHomeSnapImgUrl(homeSnapImgUrl))
+//     .then(imgUrl => console.log(imgUrl));
 
 
 function buildRequest(address) {
@@ -160,30 +164,59 @@ function getRealImageUrl(realAddUrl) {
 
 
 function makeHomeSnapRequest(address) {
-    var homeSnapUrl = 'https://www.homesnap.com/service/Misc/Search'
+    var homeSnapUrl = 'https://www.homesnap.com/service/Misc/Search';
+    var homeSnapImgUrl = 'https://www.homesnap.com/';
     var options = {
-        method: 'GET',
+        method: 'POST',
         url: homeSnapUrl,
-        body: {
-            text: address,
-            polygonType: 1,
-            skip: 0,
-            take: 8,
-            submit: false
-        }
+        headers: {
+            Connection: 'keep-alive',
+            'X-Requested-With': 'XMLHttpRequest',
+            Referer: 'https://www.homesnap.com/',
+            Accept: 'application/json, text/javascript, */*; q=0.01',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            Origin: 'https://www.homesnap.com'
+        },
+        body: JSON.stringify({"text":address,"polygonType":1,"skip":0,"take":8,"submit":false})
     };
 
     return new Promise(resolve => {
         request(options, function (err, response, body) {
-            // request({ url: zilUrl }, function (err, response, body) {
+            if (err) { console.log(err); return; }
+            resolve(body);
+        })
+    }).then(body => {
+        var jsonObject = JSON.parse(body);
+        try { homeSnapImgUrl = homeSnapImgUrl + jsonObject.d.Properties[0].Url; }
+        catch (err) { throw 'address not found'; }
+        return homeSnapImgUrl;
+    })
+}
+
+function getHomeSnapImgUrl(homeSnapUrl) {
+    var options = {
+        method: 'GET',
+        url: homeSnapUrl,
+        headers: {
+            Connection: 'close',
+            'X-Requested-With': 'XMLHttpRequest',
+            Referer: 'https://www.homesnap.com/',
+            Accept: 'application/json, text/javascript, */*; q=0.01',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            Origin: 'https://www.homesnap.com'
+        }
+    };
+    return new Promise(resolve => {
+        request(options, function (err, response, body) {
+            console.log(response.statusCode);
             if (err) { console.log(err); return; }
             console.log(body);
             resolve(body);
         })
     }).then(body => {
-        var jsonObject = JSON.parse(body);
-        try { realAddUrl = realAddUrl + jsonObject.result[0].mpr_id; }
-        catch (err) { throw 'address not found'; }
-        return realAddUrl;
+        var imgUrl = cheerio('.listingImage large', body);
+        return imgUrl;
     })
 }
