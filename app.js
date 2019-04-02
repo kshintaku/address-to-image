@@ -1,7 +1,7 @@
-var request = require('request');
-request = request.defaults({ jar: true });
-var express = require('express');
-var cheerio = require('cheerio');
+import request, { defaults } from 'request';
+request = defaults({ jar: true });
+import express from 'express';
+import cheerio from 'cheerio';
 var app = express();
 
 var redfinObject = {
@@ -194,6 +194,9 @@ function makeHomeSnapRequest(address) {
     })
 }
 
+
+// Unable to grab the image due to the HTML response not consisting of any img tags
+// Page that is returned is fairly blank with a checkbox and some buttons (check actual response)
 function getHomeSnapImgUrl(homeSnapUrl) {
     var options = {
         method: 'GET',
@@ -219,4 +222,16 @@ function getHomeSnapImgUrl(homeSnapUrl) {
         var imgUrl = cheerio('.listingImage large', body);
         return imgUrl;
     })
+}
+
+function downloadUpload(uri) {
+    var download = function (uri, filename, callback) {
+        request.head(uri, function(err, res, body) {
+            request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+        });
+    };
+
+    download(uri, 'house.jpg', function() {
+        console.log('done');
+    });
 }
