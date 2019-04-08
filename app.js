@@ -1,7 +1,8 @@
-import request, { defaults } from 'request';
-request = defaults({ jar: true });
-import express from 'express';
-import cheerio from 'cheerio';
+var request = require('request');
+request = request.defaults({ jar: true });
+var express = require('express');
+var cheerio = require('cheerio');
+var fs = require('fs');
 var app = express();
 
 var redfinObject = {
@@ -39,10 +40,15 @@ app.listen(3000, function () {
 // TODO: Better analyze Zillow
 // makeZillowRequest(zillowAddress);
 
+
+// TODO: Fix address input
 // makeRealtorRequest(realAddress)
 //     .then(realAddUrl => getRealImageUrl(realAddUrl)
-//     .then(imgUrl => console.log(imgUrl)));
+//     .then(imgUrl => downloadUpload(imgUrl)));
 
+
+// TODO: Finish HomeSnap at later date due to site loads weird
+// (scripts pulling in data instead of page with data)
 // makeHomeSnapRequest(homeSnapAddress)
 //     .then(homeSnapImgUrl => getHomeSnapImgUrl(homeSnapImgUrl))
 //     .then(imgUrl => console.log(imgUrl));
