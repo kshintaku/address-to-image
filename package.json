@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/kshintaku/address-to-image#readme",
   "dependencies": {
-    "@google-cloud/storage": "^2.4.3",
+    "@google-cloud/storage": "^2.5.0",
     "cheerio": "^1.0.0-rc.2",
     "express": "^4.16.4",
     "request": "^2.83.0"

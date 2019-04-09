@@ -1,8 +1,16 @@
 var request = require('request');
 request = request.defaults({ jar: true });
-var express = require('express');
-var cheerio = require('cheerio');
-var fs = require('fs');
+const express = require('express');
+const cheerio = require('cheerio');
+const fs = require('fs');
+const {Storage} = require('@google-cloud/storage');
+const storage = new Storage({
+    // These variables need to change for bucket and account
+    projectId: 'realestateproj',
+    keyFilename: 'realestateproj.json'
+})
+const bucket = storage.bucket( 'realestateproj' );
+const fileName = 'house.png';
 var app = express();
 
 var redfinObject = {
@@ -22,6 +30,7 @@ var redfinObject = {
 var zillowAddress = '2248+w+230th';
 var realAddress = '4242%2520Locust%2520Ave%252C%2520Long%2520Beach%252C%2520CA%252C%252090807&area_types=address&area_types=neighborhood&area_types=city&area_types=county&area_types=postal_code&area_types=street';
 var homeSnapAddress = '20955 Brighton';
+
 app.get('/propertyPhoto/:address', function (req, res) {
     const address = req.params.address;
     console.log('Address received: ' + address);
@@ -44,7 +53,7 @@ app.listen(3000, function () {
 // TODO: Fix address input
 // makeRealtorRequest(realAddress)
 //     .then(realAddUrl => getRealImageUrl(realAddUrl)
-//     .then(imgUrl => downloadUpload(imgUrl)));
+//     .then(imgUrl => gCloudUpload(imgUrl)));
 
 
 // TODO: Finish HomeSnap at later date due to site loads weird
@@ -230,14 +239,9 @@ function getHomeSnapImgUrl(homeSnapUrl) {
     })
 }
 
-function downloadUpload(uri) {
-    var download = function (uri, filename, callback) {
-        request.head(uri, function(err, res, body) {
-            request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
-        });
-    };
 
-    download(uri, 'house.jpg', function() {
-        console.log('done');
-    });
+function gCloudUpload(uri) {
+    const file = bucket.file(fileName);
+    const writeStream = file.createWriteStream();
+    request(uri).pipe(writeStream);
 }
