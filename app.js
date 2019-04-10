@@ -247,8 +247,9 @@ function gCloudUpload(uri) {
     const file = bucket.file(fileName);
     const writeStream = file.createWriteStream();
     return new Promise(resolve => {
-        request(uri).pipe(writeStream);
-        resolve(fileName);
+        request(uri).pipe(writeStream).on('finish', function() {
+            resolve(fileName);
+        });
     }).then(fileName => {
         return fileName;
     })
