@@ -20,6 +20,7 @@
     "@google-cloud/storage": "^2.5.0",
     "cheerio": "^1.0.0-rc.2",
     "express": "^4.16.4",
-    "request": "^2.83.0"
+    "request": "^2.83.0",
+    "uuid": "^3.3.2"
   }
 }
