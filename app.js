@@ -38,6 +38,7 @@ app.get('/propertyPhoto/:address', function (req, res) {
     makeRedfinRequest(newUrl)
         .then(redfinURL => getImageUrl(redfinURL))
         .then(imgUrl => buildResponse(imgUrl))
+        .then(cloudUrl => gCloudUpload(cloudUrl.url))
         .then(keithResponse => res.status(200).send(keithResponse))
         .catch(err => res.status(500).send(err));
 });
@@ -49,6 +50,13 @@ app.listen(3000, function () {
 // TODO: Better analyze Zillow
 // makeZillowRequest(zillowAddress);
 
+// var newUrl = buildRequest('2645%20west%20231st');
+// makeRedfinRequest(newUrl)
+//     .then(redfinUrl => getImageUrl(redfinUrl))
+//     .then(imgUrl => buildResponse(imgUrl))
+//     .then(sendCloud => gCloudUpload(sendCloud.url))
+//     .then(keithResponse => console.log(keithResponse))
+//     .catch(err => console.log(err));
 
 // TODO: Fix address input
 // makeRealtorRequest(realAddress)
@@ -96,17 +104,21 @@ function getImageUrl(redImgUrl) {
         })
     }).then(body => {
         var imgUrl = cheerio('.img-card', body).attr().src;
+        if (typeof imgUrl === 'undefined') {
+            throw new Error('No image found in RedFin');
+        }
         return imgUrl;
     })
 }
 
 
 function buildResponse(imgUrl) {
-    imgUrl = imgUrl.replace('mbpaddedwide', 'bigPhoto');
+    imgUrl = imgUrl.replace('mbpaddedwide', 'bigphoto');
     imgUrl = imgUrl.replace('genMid\.', '');
     var keithResponse = {
         url: imgUrl
     };
+    console.log(imgUrl);
     return keithResponse;
 }
 
@@ -242,8 +254,9 @@ function getHomeSnapImgUrl(homeSnapUrl) {
 
 
 function gCloudUpload(uri) {
-    var extension = uri.split('.');
-    var fileName = uuidv1() + '.' + extension[extension.length -1];
+    // TODO: Verify image response code is OK(200)
+    var extension = uri.split('/');
+    var fileName = uuidv1() + '_!!_' + extension[extension.length -1];
     const file = bucket.file(fileName);
     const writeStream = file.createWriteStream();
     return new Promise(resolve => {
