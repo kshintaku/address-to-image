@@ -62,7 +62,8 @@ app.listen(3000, function () {
 // makeRealtorRequest(realAddress)
 //     .then(realAddUrl => getRealImageUrl(realAddUrl))
 //     .then(imgUrl => gCloudUpload(imgUrl))
-//     .then(newUrl => console.log(newUrl));
+//     .then(newUrl => console.log(newUrl))
+//     .catch(err => console.log(err));
 
 
 // TODO: Finish HomeSnap at later date due to site loads weird
@@ -118,7 +119,6 @@ function buildResponse(imgUrl) {
     var keithResponse = {
         url: imgUrl
     };
-    console.log(imgUrl);
     return keithResponse;
 }
 
@@ -260,9 +260,14 @@ function gCloudUpload(uri) {
     const file = bucket.file(fileName);
     const writeStream = file.createWriteStream();
     return new Promise(resolve => {
-        request(uri).pipe(writeStream).on('finish', function() {
-            resolve(fileName);
-        });
+        request(uri)
+            .pipe(writeStream)
+            .on('finish', function() {
+                resolve(fileName);
+            })
+            .on('error', function() {
+                throw "file not uploaded";
+            });
     }).then(fileName => {
         return fileName;
     })
