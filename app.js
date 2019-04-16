@@ -47,6 +47,12 @@ app.listen(3000, function () {
     console.log("Started on PORT 3000");
 });
 
+
+// Method to ping Redfin for connectivity
+// testRedfin()
+//     .then(output => console.log(output))
+//     .catch(err => console.log(err[0] + ' ' + err[1]));
+
 // TODO: Better analyze Zillow
 // makeZillowRequest(zillowAddress);
 
@@ -259,16 +265,39 @@ function gCloudUpload(uri) {
     var fileName = uuidv1() + '_!!_' + extension[extension.length -1];
     const file = bucket.file(fileName);
     const writeStream = file.createWriteStream();
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
         request(uri)
             .pipe(writeStream)
             .on('finish', function() {
                 resolve(fileName);
             })
             .on('error', function() {
-                throw "file not uploaded";
+                reject('File not uploaded');
             });
     }).then(fileName => {
         return fileName;
+    }).catch(err => {
+        return err;
+    });
+}
+
+
+function testRedfin() {
+    var testUrl = 'https://www.redfin.com';
+
+    return new Promise((resolve, reject) => {
+        request({ url: testUrl }, function (err, response, body) {
+            if (err || response.statusCode != 200) { reject({response, err}); }
+            resolve(response);
+        })
+    }).then(response => {
+        return 'Redfin responded with : ' + response.statusCode;
+    }).catch(error => {
+        if (typeof error.response != 'undefined') {
+            throw (error.response.statusCode, 'Redfin not responding');
+        }
+        else {
+            throw (['404', error.err.code]);
+        }
     })
 }
