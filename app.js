@@ -104,17 +104,24 @@ function makeRedfinRequest(redfinRequest) {
 }
 
 function getImageUrl(redImgUrl) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
         request({ url: redImgUrl }, function (err, response, body) {
-            if (err) { console.log(err); return; }
+            if (err || response.statusCode != 200) { reject({response, err}); }
             resolve(body);
         })
     }).then(body => {
         var imgUrl = cheerio('.img-card', body).attr().src;
         if (typeof imgUrl === 'undefined') {
-            throw new Error('No image found in RedFin');
+            throw (['404', 'No image found in RedFin']);
         }
         return imgUrl;
+    }).catch(error => {
+        if (typeof error.response != 'undefined') {
+            throw (error.response.statusCode, 'Redfin not responding');
+        }
+        else {
+            throw (['404', error.err.code]);
+        }
     })
 }
 
@@ -283,7 +290,7 @@ function gCloudUpload(uri) {
 
 
 function testRedfin() {
-    var testUrl = 'https://www.redfin.com';
+    var testUrl = 'https://www.redfin.com/CA/Signal-Hill/2240-N-Legion-Dr-90755/unit-204/home/7574819';
 
     return new Promise((resolve, reject) => {
         request({ url: testUrl }, function (err, response, body) {
@@ -291,8 +298,15 @@ function testRedfin() {
             resolve(response);
         })
     }).then(response => {
-        return 'Redfin responded with : ' + response.statusCode;
-    }).catch(error => {
+        var testPic = cheerio('.img-card', body).attr().src;
+        if (typeof testPic === 'undefined') {
+            throw (['404', 'Test Image Failed']);
+        }
+        // return 'Redfin responded with : ' + response.statusCode;
+    }).then(imgUrl => getImageUrl(imgUrl))
+    .then(toGCloud => gCloudUpload(toGCloud))
+    // TODO: finish this section - return something useful like 200 or 400, etc.
+    .catch(error => {
         if (typeof error.response != 'undefined') {
             throw (error.response.statusCode, 'Redfin not responding');
         }
