@@ -39,8 +39,8 @@ app.get('/propertyPhoto/:address', function (req, res) {
         .then(redfinURL => getImageUrl(redfinURL))
         .then(imgUrl => buildResponse(imgUrl))
         .then(cloudUrl => gCloudUpload(cloudUrl.url))
-        .then(keithResponse => res.status(200).send(keithResponse))
-        .catch(err => res.status(500).send(err));
+        .then(keithResponse => res.status(keithResponse[0]).send(keithResponse[1]))
+        .catch(err => res.status(err[0]).send(err[1]));
 });
 
 app.listen(3000, function () {
@@ -112,7 +112,7 @@ function getImageUrl(redImgUrl) {
     }).then(body => {
         var imgUrl = cheerio('.img-card', body).attr().src;
         if (typeof imgUrl === 'undefined') {
-            throw (['404', 'No image found in RedFin']);
+            throw ([404, 'No image found in RedFin']);
         }
         return imgUrl;
     }).catch(error => {
@@ -120,9 +120,9 @@ function getImageUrl(redImgUrl) {
             throw (error.response.statusCode, 'Redfin not responding');
         }
         else {
-            throw (['404', error.err.code]);
+            throw ([404, error.err.code]);
         }
-    })
+    });
 }
 
 
@@ -273,7 +273,9 @@ function gCloudUpload(uri) {
     const file = bucket.file(fileName);
     const writeStream = file.createWriteStream();
     return new Promise((resolve, reject) => {
-        request(uri)
+        request({ url: uri }, function (err, response, body) {
+            if (err || response.statusCode != 200) { reject({response, err}); }
+            })
             .pipe(writeStream)
             .on('finish', function() {
                 resolve(fileName);
@@ -281,37 +283,26 @@ function gCloudUpload(uri) {
             .on('error', function() {
                 reject('File not uploaded');
             });
-    }).then(fileName => {
-        return fileName;
-    }).catch(err => {
-        return err;
-    });
+        }).then(fileName => {
+            return [200, fileName];
+        }).catch(err => {
+            throw ([404, err.err.code]);
+        });
 }
 
 
 function testRedfin() {
     var testUrl = 'https://www.redfin.com/CA/Signal-Hill/2240-N-Legion-Dr-90755/unit-204/home/7574819';
 
-    return new Promise((resolve, reject) => {
-        request({ url: testUrl }, function (err, response, body) {
-            if (err || response.statusCode != 200) { reject({response, err}); }
-            resolve(response);
-        })
-    }).then(response => {
-        var testPic = cheerio('.img-card', body).attr().src;
-        if (typeof testPic === 'undefined') {
-            throw (['404', 'Test Image Failed']);
-        }
-        // return 'Redfin responded with : ' + response.statusCode;
-    }).then(imgUrl => getImageUrl(imgUrl))
-    .then(toGCloud => gCloudUpload(toGCloud))
-    // TODO: finish this section - return something useful like 200 or 400, etc.
+    return getImageUrl(testUrl)
+    .then(fullImg => buildResponse(fullImg))
+    .then(toGCloud => gCloudUpload(toGCloud.url))
     .catch(error => {
         if (typeof error.response != 'undefined') {
-            throw (error.response.statusCode, 'Redfin not responding');
+            throw ([error.response.statusCode, 'Redfin not responding']);
         }
         else {
-            throw (['404', error.err.code]);
+            throw ([404, error.err.code]);
         }
-    })
+    });
 }
