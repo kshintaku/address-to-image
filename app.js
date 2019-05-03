@@ -81,9 +81,9 @@ app.listen(3000, function () {
 
 function buildRequest(address) {
     var redfinURL = 'https://www.redfin.com/stingray/do/location-autocomplete?'
-    var redURL = redfinURL + 'location=' + address;
-    redURL = redURL + '&start=0&count=10&v=2&market=socal&al=1&iss=false&ooa=true&mrs=false&region_id=37626&region_type=2';
-    return redURL;
+    redfinObject.location = address;
+    redfinURL += serializeURL(redfinObject);
+    return redfinURL;
 }
 
 
@@ -267,7 +267,6 @@ function getHomeSnapImgUrl(homeSnapUrl) {
 
 
 function gCloudUpload(uri) {
-    // TODO: Verify image response code is OK(200)
     var extension = uri.split('/');
     var fileName = uuidv1() + '_!!_' + extension[extension.length -1];
     const file = bucket.file(fileName);
@@ -281,7 +280,7 @@ function gCloudUpload(uri) {
                 resolve(fileName);
             })
             .on('error', function() {
-                reject('File not uploaded');
+                reject('unable to upload');
             });
         }).then(fileName => {
             return [200, fileName];
@@ -305,4 +304,16 @@ function testRedfin() {
             throw ([404, error.err.code]);
         }
     });
+}
+
+
+function serializeURL(obj) {
+    var str = "";
+    for (var key in obj) {
+        if (str != "") {
+            str += "&";
+        }
+        str += key + "=" + encodeURIComponent(obj[key]);
+    }
+    return str;
 }
