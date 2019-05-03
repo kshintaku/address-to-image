@@ -27,25 +27,33 @@ var redfinObject = {
     region_type: '2'
 };
 
+var realObject = {
+    input: '4242 Locust Ave, Long Beach, CA, 90807',
+    area_types: ['address', 'neighborhood', 'city', 'country', 'postal_code', 'street']
+};
+
 var zillowAddress = '2248+w+230th';
 var realAddress = '4242%2520Locust%2520Ave%252C%2520Long%2520Beach%252C%2520CA%252C%252090807&area_types=address&area_types=neighborhood&area_types=city&area_types=county&area_types=postal_code&area_types=street';
 var homeSnapAddress = '20955 Brighton';
 
-app.get('/propertyPhoto/:address', function (req, res) {
-    const address = req.params.address;
-    console.log('Address received: ' + address);
-    var newUrl = buildRequest(address);
-    makeRedfinRequest(newUrl)
-        .then(redfinURL => getImageUrl(redfinURL))
-        .then(imgUrl => buildResponse(imgUrl))
-        .then(cloudUrl => gCloudUpload(cloudUrl.url))
-        .then(keithResponse => res.status(keithResponse[0]).send(keithResponse[1]))
-        .catch(err => res.status(err[0]).send(err[1]));
-});
+// app.get('/propertyPhoto/:address', function (req, res) {
+//     const address = req.params.address;
+//     console.log('Address received: ' + address);
+//     var newUrl = buildRequest(address);
+//     makeRedfinRequest(newUrl)
+//         .then(redfinURL => getImageUrl(redfinURL))
+//         .then(imgUrl => buildResponse(imgUrl))
+//         .then(cloudUrl => gCloudUpload(cloudUrl.url))
+//         .then(keithResponse => res.status(keithResponse[0]).send(keithResponse[1]))
+//         .catch(err => res.status(err[0]).send(err[1]));
+// });
 
-app.listen(3000, function () {
-    console.log("Started on PORT 3000");
-});
+// app.listen(3000, function () {
+//     console.log("Started on PORT 3000");
+// });
+
+console.log(serializeURL(realObject));
+console.log(realAddress);
 
 
 // Method to ping Redfin for connectivity
@@ -310,10 +318,20 @@ function testRedfin() {
 function serializeURL(obj) {
     var str = "";
     for (var key in obj) {
-        if (str != "") {
-            str += "&";
+        if ( typeof obj[key] == 'object') {
+            for (var i in obj[key]) {
+                if (str != "") {
+                    str += "&";
+                }
+                str += key + "=" + encodeURIComponent(obj[key][i]);
+            }
         }
-        str += key + "=" + encodeURIComponent(obj[key]);
+        else {
+            if (str != "") {
+                str += "&";
+            }
+            str += key + "=" + encodeURIComponent(obj[key]);
+        }
     }
     return str;
 }
