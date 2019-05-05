@@ -94,7 +94,6 @@ function buildRequest(address) {
     return redfinURL;
 }
 
-
 function makeRedfinRequest(redfinRequest) {
     var redImgUrl = 'https://www.redfin.com';
 
@@ -104,9 +103,12 @@ function makeRedfinRequest(redfinRequest) {
             resolve(body);
         })
     }).then(body => {
-        var jsonObject = JSON.parse(body.slice(4));
+        let jsonObject;
+        try { jsonObject = JSON.parse(body.slice(4)); }
+        catch (err) { throw [500, 'redfin thinks we are robots']; }
+        
         try { redImgUrl = redImgUrl + jsonObject.payload.sections[0].rows[0].url; }
-        catch (err) { throw 'address not found'; }
+        catch (err) { throw [404, 'address not found']; }
         return redImgUrl;
     })
 }
@@ -119,13 +121,11 @@ function getImageUrl(redImgUrl) {
         })
     }).then(body => {
         var imgUrl = cheerio('.img-card', body).attr().src;
-        if (typeof imgUrl === 'undefined') {
-            throw ([404, 'No image found in RedFin']);
-        }
+        if (!imgUrl) { throw ([404, 'No image found in RedFin']); }
         return imgUrl;
     }).catch(error => {
         if (typeof error.response != 'undefined') {
-            throw (error.response.statusCode, 'Redfin not responding');
+            throw ([error.response.statusCode, 'Redfin not responding']);
         }
         else {
             throw ([404, error.err.code]);
@@ -194,7 +194,7 @@ function makeRealtorRequest(address) {
     }).then(body => {
         var jsonObject = JSON.parse(body);
         try { realAddUrl = realAddUrl + jsonObject.result[0].mpr_id; }
-        catch (err) { throw 'address not found'; }
+        catch (err) { throw [404, 'address not found']; }
         return realAddUrl;
     })
 }
@@ -239,7 +239,7 @@ function makeHomeSnapRequest(address) {
     }).then(body => {
         var jsonObject = JSON.parse(body);
         try { homeSnapImgUrl = homeSnapImgUrl + jsonObject.d.Properties[0].Url; }
-        catch (err) { throw 'address not found'; }
+        catch (err) { throw [404, 'address not found']; }
         return homeSnapImgUrl;
     })
 }
