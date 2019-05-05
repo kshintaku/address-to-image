@@ -1,5 +1,6 @@
 const serializeURL = require('./util/serializeUrl');
 const redfinProcessImage = require('./controllers/redfin');
+const realtorProcessImage = require('./controllers/realtor');
 const gCloudUpload = require('./util/gCloudUpload');
 
 const request = require('request').defaults({ jar: true });
@@ -8,33 +9,17 @@ const cheerio = require('cheerio');
 
 var app = express();
 
-
-
-var realObject = {
-    input: '4242 Locust Ave, Long Beach, CA, 90807',
-    area_types: ['address', 'neighborhood', 'city', 'county', 'postal_code', 'street']
-};
-
 var zillowAddress = '2248+w+230th';
 var realAddress = '4242%2520Locust%2520Ave%252C%2520Long%2520Beach%252C%2520CA%252C%252090807&area_types=address&area_types=neighborhood&area_types=city&area_types=county&area_types=postal_code&area_types=street';
 var homeSnapAddress = '20955 Brighton';
 
 app.get('/propertyPhoto/:address', redfinProcessImage);
 
-app.get('/propertyPhoto1/:address', function (req, res) {
-    const address = req.params.address;
-    console.log('Address received: ' + address);
-    makeRealtorRequest(address)
-        .then(realAddUrl => getRealImageUrl(realAddUrl))
-        .then(imgUrl => gCloudUpload(imgUrl))
-        .then(keithResponse => res.status(keithResponse[0]).send(keithResponse[1]))
-        .catch(err => res.status(err[0]).send(err[1]));
-});
+app.get('/propertyPhoto1/:address', realtorProcessImage);
 
 app.listen(3000, function () {
     console.log("Started on PORT 3000");
 });
-
 
 
 function makeZillowRequest(address) {
@@ -69,38 +54,6 @@ function makeZillowRequest(address) {
         })
     }).then(body => {
         var imgUrl = cheerio('.photo-tile-image', body).attr().src;
-        return imgUrl;
-    })
-}
-
-
-function makeRealtorRequest(address) {
-    realObject.input = address;
-    var realUrl = 'https://www.realtor.com/api/v1/geo-landing/parser/suggest/?' + serializeURL(realObject, true);
-    var realAddUrl = 'https://www.realtor.com/realestateandhomes-detail/M';
-
-    return new Promise(resolve => {
-        request({ url: realUrl }, function (err, response, body) {
-            if (err) { console.log(err); return; }
-            resolve(body);
-        })
-    }).then(body => {
-        var jsonObject = JSON.parse(body);
-        try { realAddUrl = realAddUrl + jsonObject.result[0].mpr_id; }
-        catch (err) { throw [404, 'address not found']; }
-        return realAddUrl;
-    })
-}
-
-
-function getRealImageUrl(realAddUrl) {
-    return new Promise(resolve => {
-        request({ url: realAddUrl }, function (err, response, body) {
-            if (err) { console.log(err); return; }
-            resolve(body);
-        })
-    }).then(body => {
-        var imgUrl = cheerio('.modal-heroimg', body).children()[0].attribs.src;
         return imgUrl;
     })
 }
@@ -166,8 +119,3 @@ function getHomeSnapImgUrl(homeSnapUrl) {
         return imgUrl;
     })
 }
-
-
-
-
-
