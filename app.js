@@ -1,31 +1,14 @@
-var request = require('request');
-request = request.defaults({ jar: true });
+const serializeURL = require('./util/serializeUrl');
+const redfinProcessImage = require('./controllers/redfin');
+const gCloudUpload = require('./util/gCloudUpload');
+
+const request = require('request').defaults({ jar: true });
 const express = require('express');
 const cheerio = require('cheerio');
-const uuidv1 = require('uuid/v1');
-const fs = require('fs');
-const { Storage } = require('@google-cloud/storage');
-const storage = new Storage({
-    // These variables need to change for bucket and account
-    projectId: 'realestateproj',
-    keyFilename: 'realestateproj.json'
-})
-const bucket = storage.bucket('realestateproj');
+
 var app = express();
 
-var redfinObject = {
-    location: '2645%20west%20231st',
-    start: '0',
-    count: '10',
-    v: '2',
-    market: 'socal',
-    ai: '1',
-    iss: 'false',
-    ooa: 'true',
-    mrs: 'false',
-    region_id: '37626',
-    region_type: '2'
-};
+
 
 var realObject = {
     input: '4242 Locust Ave, Long Beach, CA, 90807',
@@ -36,17 +19,7 @@ var zillowAddress = '2248+w+230th';
 var realAddress = '4242%2520Locust%2520Ave%252C%2520Long%2520Beach%252C%2520CA%252C%252090807&area_types=address&area_types=neighborhood&area_types=city&area_types=county&area_types=postal_code&area_types=street';
 var homeSnapAddress = '20955 Brighton';
 
-app.get('/propertyPhoto/:address', function (req, res) {
-    const address = req.params.address;
-    console.log('Address received: ' + address);
-    var newUrl = buildRequest(address);
-    makeRedfinRequest(newUrl)
-        .then(redfinURL => getImageUrl(redfinURL))
-        .then(imgUrl => buildResponse(imgUrl))
-        .then(cloudUrl => gCloudUpload(cloudUrl.url))
-        .then(keithResponse => res.status(keithResponse[0]).send(keithResponse[1]))
-        .catch(err => res.status(err[0]).send(err[1]));
-});
+app.get('/propertyPhoto/:address', redfinProcessImage);
 
 app.get('/propertyPhoto1/:address', function (req, res) {
     const address = req.params.address;
@@ -56,102 +29,12 @@ app.get('/propertyPhoto1/:address', function (req, res) {
         .then(imgUrl => gCloudUpload(imgUrl))
         .then(keithResponse => res.status(keithResponse[0]).send(keithResponse[1]))
         .catch(err => res.status(err[0]).send(err[1]));
-})
+});
 
 app.listen(3000, function () {
     console.log("Started on PORT 3000");
 });
 
-// console.log(serializeURL(realObject, true));
-// console.log('input=' + realAddress);
-
-
-// Method to ping Redfin for connectivity
-// testRedfin()
-//     .then(output => console.log(output))
-//     .catch(err => console.log(err[0] + ' ' + err[1]));
-
-// TODO: Better analyze Zillow
-// makeZillowRequest(zillowAddress);
-
-// var newUrl = buildRequest('2645%20west%20231st');
-// makeRedfinRequest(newUrl)
-//     .then(redfinUrl => getImageUrl(redfinUrl))
-//     .then(imgUrl => buildResponse(imgUrl))
-//     .then(sendCloud => gCloudUpload(sendCloud.url))
-//     .then(keithResponse => console.log(keithResponse))
-//     .catch(err => console.log(err));
-
-// TODO: Fix address input
-// makeRealtorRequest('4242 Locust Ave')
-//     .then(realAddUrl => getRealImageUrl(realAddUrl))
-//     .then(imgUrl => gCloudUpload(imgUrl))
-//     .then(newUrl => console.log(newUrl))
-//     .catch(err => console.log(err));
-
-
-// TODO: Finish HomeSnap at later date due to site loads weird
-// (scripts pulling in data instead of page with data)
-// makeHomeSnapRequest(homeSnapAddress)
-//     .then(homeSnapImgUrl => getHomeSnapImgUrl(homeSnapImgUrl))
-//     .then(imgUrl => console.log(imgUrl));
-
-
-function buildRequest(address) {
-    var redfinURL = 'https://www.redfin.com/stingray/do/location-autocomplete?'
-    redfinObject.location = address;
-    redfinURL += serializeURL(redfinObject, false);
-    return redfinURL;
-}
-
-function makeRedfinRequest(redfinRequest) {
-    var redImgUrl = 'https://www.redfin.com';
-
-    return new Promise(resolve => {
-        request({ url: redfinRequest }, function (err, response, body) {
-            if (err) { console.log(err); return; }
-            resolve(body);
-        })
-    }).then(body => {
-        let jsonObject;
-        try { jsonObject = JSON.parse(body.slice(4)); }
-        catch (err) { throw [500, 'redfin thinks we are robots']; }
-
-        try { redImgUrl = redImgUrl + jsonObject.payload.sections[0].rows[0].url; }
-        catch (err) { throw [404, 'address not found']; }
-        return redImgUrl;
-    })
-}
-
-function getImageUrl(redImgUrl) {
-    return new Promise((resolve, reject) => {
-        request({ url: redImgUrl }, function (err, response, body) {
-            if (err || response.statusCode != 200) { reject({ response, err }); }
-            resolve(body);
-        })
-    }).then(body => {
-        var imgUrl = cheerio('.img-card', body).attr().src;
-        if (!imgUrl) { throw ([404, 'No image found in RedFin']); }
-        return imgUrl;
-    }).catch(error => {
-        if (typeof error.response != 'undefined') {
-            throw ([error.response.statusCode, 'Redfin not responding']);
-        }
-        else {
-            throw ([404, error.err.code]);
-        }
-    });
-}
-
-
-function buildResponse(imgUrl) {
-    imgUrl = imgUrl.replace('mbpaddedwide', 'bigphoto');
-    imgUrl = imgUrl.replace('genMid\.', '');
-    var keithResponse = {
-        url: imgUrl
-    };
-    return keithResponse;
-}
 
 
 function makeZillowRequest(address) {
@@ -285,71 +168,6 @@ function getHomeSnapImgUrl(homeSnapUrl) {
 }
 
 
-function gCloudUpload(uri) {
-    var extension = uri.split('/');
-    var fileName = uuidv1() + '_' + extension[extension.length - 1];
-    const file = bucket.file(fileName);
-    const writeStream = file.createWriteStream();
-    return new Promise((resolve, reject) => {
-        request({ url: uri }, function (err, response, body) {
-            if (err || response.statusCode != 200) { reject({ response, err }); }
-        })
-            .pipe(writeStream)
-            .on('finish', function () {
-                file.makePublic();
-                fileName = 'https://storage.googleapis.com/' + storage.projectId + '/' + fileName;
-                resolve(fileName);
-            })
-            .on('error', function () {
-                reject('unable to upload');
-            });
-    }).then(fileName => {
-        return [200, fileName];
-    }).catch(err => {
-        throw ([404, err.err.code]);
-    });
-}
 
 
-function testRedfin() {
-    var testUrl = 'https://www.redfin.com/CA/Signal-Hill/2240-N-Legion-Dr-90755/unit-204/home/7574819';
 
-    return getImageUrl(testUrl)
-        .then(fullImg => buildResponse(fullImg))
-        .then(toGCloud => gCloudUpload(toGCloud.url))
-        .catch(error => {
-            if (typeof error.response != 'undefined') {
-                throw ([error.response.statusCode, 'Redfin not responding']);
-            }
-            else {
-                throw ([404, error.err.code]);
-            }
-        });
-}
-
-
-function serializeURL(obj, dblEncode) {
-    var str = "";
-    for (var key in obj) {
-        if (typeof obj[key] == 'object') {
-            for (var i in obj[key]) {
-                if (str != "") {
-                    str += "&";
-                }
-                str += key + "=" + encodeURIComponent(obj[key][i]);
-            }
-        }
-        else {
-            if (str != "") {
-                str += "&";
-            }
-            if (dblEncode == true) {
-                str += key + "=" + encodeURIComponent(encodeURIComponent(obj[key]));
-            }
-            else {
-                str += key + "=" + encodeURIComponent(obj[key]);
-            }
-        }
-    }
-    return str;
-}
