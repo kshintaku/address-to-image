@@ -4,13 +4,13 @@ const express = require('express');
 const cheerio = require('cheerio');
 const uuidv1 = require('uuid/v1');
 const fs = require('fs');
-const {Storage} = require('@google-cloud/storage');
+const { Storage } = require('@google-cloud/storage');
 const storage = new Storage({
     // These variables need to change for bucket and account
     projectId: 'realestateproj',
     keyFilename: 'realestateproj.json'
 })
-const bucket = storage.bucket( 'realestateproj' );
+const bucket = storage.bucket('realestateproj');
 var app = express();
 
 var redfinObject = {
@@ -47,6 +47,16 @@ app.get('/propertyPhoto/:address', function (req, res) {
         .then(keithResponse => res.status(keithResponse[0]).send(keithResponse[1]))
         .catch(err => res.status(err[0]).send(err[1]));
 });
+
+app.get('/propertyPhoto1/:address', function (req, res) {
+    const address = req.params.address;
+    console.log('Address received: ' + address);
+    makeRealtorRequest(address)
+        .then(realAddUrl => getRealImageUrl(realAddUrl))
+        .then(imgUrl => gCloudUpload(imgUrl))
+        .then(keithResponse => res.status(keithResponse[0]).send(keithResponse[1]))
+        .catch(err => res.status(err[0]).send(err[1]));
+})
 
 app.listen(3000, function () {
     console.log("Started on PORT 3000");
@@ -106,7 +116,7 @@ function makeRedfinRequest(redfinRequest) {
         let jsonObject;
         try { jsonObject = JSON.parse(body.slice(4)); }
         catch (err) { throw [500, 'redfin thinks we are robots']; }
-        
+
         try { redImgUrl = redImgUrl + jsonObject.payload.sections[0].rows[0].url; }
         catch (err) { throw [404, 'address not found']; }
         return redImgUrl;
@@ -116,7 +126,7 @@ function makeRedfinRequest(redfinRequest) {
 function getImageUrl(redImgUrl) {
     return new Promise((resolve, reject) => {
         request({ url: redImgUrl }, function (err, response, body) {
-            if (err || response.statusCode != 200) { reject({response, err}); }
+            if (err || response.statusCode != 200) { reject({ response, err }); }
             resolve(body);
         })
     }).then(body => {
@@ -228,7 +238,7 @@ function makeHomeSnapRequest(address) {
             'Accept-Language': 'en-US,en;q=0.9',
             Origin: 'https://www.homesnap.com'
         },
-        body: JSON.stringify({"text":address,"polygonType":1,"skip":0,"take":8,"submit":false})
+        body: JSON.stringify({ "text": address, "polygonType": 1, "skip": 0, "take": 8, "submit": false })
     };
 
     return new Promise(resolve => {
@@ -277,27 +287,27 @@ function getHomeSnapImgUrl(homeSnapUrl) {
 
 function gCloudUpload(uri) {
     var extension = uri.split('/');
-    var fileName = uuidv1() + '_' + extension[extension.length -1];
+    var fileName = uuidv1() + '_' + extension[extension.length - 1];
     const file = bucket.file(fileName);
     const writeStream = file.createWriteStream();
     return new Promise((resolve, reject) => {
         request({ url: uri }, function (err, response, body) {
-            if (err || response.statusCode != 200) { reject({response, err}); }
-            })
+            if (err || response.statusCode != 200) { reject({ response, err }); }
+        })
             .pipe(writeStream)
-            .on('finish', function() {
+            .on('finish', function () {
                 file.makePublic();
                 fileName = 'https://storage.googleapis.com/' + storage.projectId + '/' + fileName;
                 resolve(fileName);
             })
-            .on('error', function() {
+            .on('error', function () {
                 reject('unable to upload');
             });
-        }).then(fileName => {
-            return [200, fileName];
-        }).catch(err => {
-            throw ([404, err.err.code]);
-        });
+    }).then(fileName => {
+        return [200, fileName];
+    }).catch(err => {
+        throw ([404, err.err.code]);
+    });
 }
 
 
@@ -305,23 +315,23 @@ function testRedfin() {
     var testUrl = 'https://www.redfin.com/CA/Signal-Hill/2240-N-Legion-Dr-90755/unit-204/home/7574819';
 
     return getImageUrl(testUrl)
-    .then(fullImg => buildResponse(fullImg))
-    .then(toGCloud => gCloudUpload(toGCloud.url))
-    .catch(error => {
-        if (typeof error.response != 'undefined') {
-            throw ([error.response.statusCode, 'Redfin not responding']);
-        }
-        else {
-            throw ([404, error.err.code]);
-        }
-    });
+        .then(fullImg => buildResponse(fullImg))
+        .then(toGCloud => gCloudUpload(toGCloud.url))
+        .catch(error => {
+            if (typeof error.response != 'undefined') {
+                throw ([error.response.statusCode, 'Redfin not responding']);
+            }
+            else {
+                throw ([404, error.err.code]);
+            }
+        });
 }
 
 
 function serializeURL(obj, dblEncode) {
     var str = "";
     for (var key in obj) {
-        if ( typeof obj[key] == 'object') {
+        if (typeof obj[key] == 'object') {
             for (var i in obj[key]) {
                 if (str != "") {
                     str += "&";
