@@ -29,7 +29,7 @@ var redfinObject = {
 
 var realObject = {
     input: '4242 Locust Ave, Long Beach, CA, 90807',
-    area_types: ['address', 'neighborhood', 'city', 'country', 'postal_code', 'street']
+    area_types: ['address', 'neighborhood', 'city', 'county', 'postal_code', 'street']
 };
 
 var zillowAddress = '2248+w+230th';
@@ -52,8 +52,8 @@ app.listen(3000, function () {
     console.log("Started on PORT 3000");
 });
 
-// console.log(serializeURL(realObject));
-// console.log(realAddress);
+// console.log(serializeURL(realObject, true));
+// console.log('input=' + realAddress);
 
 
 // Method to ping Redfin for connectivity
@@ -73,7 +73,7 @@ app.listen(3000, function () {
 //     .catch(err => console.log(err));
 
 // TODO: Fix address input
-// makeRealtorRequest(realAddress)
+// makeRealtorRequest('4242 Locust Ave')
 //     .then(realAddUrl => getRealImageUrl(realAddUrl))
 //     .then(imgUrl => gCloudUpload(imgUrl))
 //     .then(newUrl => console.log(newUrl))
@@ -90,7 +90,7 @@ app.listen(3000, function () {
 function buildRequest(address) {
     var redfinURL = 'https://www.redfin.com/stingray/do/location-autocomplete?'
     redfinObject.location = address;
-    redfinURL += serializeURL(redfinObject);
+    redfinURL += serializeURL(redfinObject, false);
     return redfinURL;
 }
 
@@ -182,7 +182,8 @@ function makeZillowRequest(address) {
 
 
 function makeRealtorRequest(address) {
-    var realUrl = 'https://www.realtor.com/api/v1/geo-landing/parser/suggest/?input=' + address;
+    realObject.input = address;
+    var realUrl = 'https://www.realtor.com/api/v1/geo-landing/parser/suggest/?' + serializeURL(realObject, true);
     var realAddUrl = 'https://www.realtor.com/realestateandhomes-detail/M';
 
     return new Promise(resolve => {
@@ -276,7 +277,7 @@ function getHomeSnapImgUrl(homeSnapUrl) {
 
 function gCloudUpload(uri) {
     var extension = uri.split('/');
-    var fileName = uuidv1() + '_!!_' + extension[extension.length -1];
+    var fileName = uuidv1() + '_' + extension[extension.length -1];
     const file = bucket.file(fileName);
     const writeStream = file.createWriteStream();
     return new Promise((resolve, reject) => {
@@ -317,7 +318,7 @@ function testRedfin() {
 }
 
 
-function serializeURL(obj) {
+function serializeURL(obj, dblEncode) {
     var str = "";
     for (var key in obj) {
         if ( typeof obj[key] == 'object') {
@@ -332,7 +333,12 @@ function serializeURL(obj) {
             if (str != "") {
                 str += "&";
             }
-            str += key + "=" + encodeURIComponent(obj[key]);
+            if (dblEncode == true) {
+                str += key + "=" + encodeURIComponent(encodeURIComponent(obj[key]));
+            }
+            else {
+                str += key + "=" + encodeURIComponent(obj[key]);
+            }
         }
     }
     return str;
