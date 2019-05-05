@@ -1,6 +1,7 @@
 const serializeURL = require('./util/serializeUrl');
 const redfinProcessImage = require('./controllers/redfin');
 const realtorProcessImage = require('./controllers/realtor');
+const truliaProcessImage = require('./controllers/trulia');
 const gCloudUpload = require('./util/gCloudUpload');
 
 const request = require('request').defaults({ jar: true });
@@ -13,9 +14,12 @@ var zillowAddress = '2248+w+230th';
 var realAddress = '4242%2520Locust%2520Ave%252C%2520Long%2520Beach%252C%2520CA%252C%252090807&area_types=address&area_types=neighborhood&area_types=city&area_types=county&area_types=postal_code&area_types=street';
 var homeSnapAddress = '20955 Brighton';
 
+
 app.get('/propertyPhoto/:address', redfinProcessImage);
 
 app.get('/propertyPhoto1/:address', realtorProcessImage);
+
+app.get('/propertyPhoto2/:address', truliaProcessImage);
 
 app.listen(3000, function () {
     console.log("Started on PORT 3000");
