@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es6",
+        "noImplicitAny": false,
+        "moduleResolution": "node",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "traceResolution": false,
+        "sourceMap": true,
+        "outDir": "dist",
+        "baseUrl": ".",
+        "rootDir": "../",
+        "paths": {
+            "*": [
+                "node_modules/*",
+                "src/types/*"
+            ]
+        }
+    },
+    "include": [
+      "src/**/*"
+    ],
+    "exclude": [
+      "node_modules"
+    ]
+}
