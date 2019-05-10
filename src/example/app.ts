@@ -1,7 +1,9 @@
 import * as express from 'express';
+import * as cheerio from 'cheerio';
 import {realtorRequest, redfinRequest, truliaRequest} from './controllers';
 import {rejectPromise} from '../util/rejectPromise';
 const request = require('request-promise-native');
+
 
 const app = express();
 
