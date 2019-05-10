@@ -1,6 +1,6 @@
 import {rejectPromise} from '../util/rejectPromise';
 import {serializeUrl} from '../util/serializeUrl';
-const request = require('request');
+const request = require('request-promise-native');
 
 const truliaObj = {
     results: '5',

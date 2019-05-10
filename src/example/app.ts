@@ -1,15 +1,15 @@
 import * as express from 'express';
 import {realtorRequest, redfinRequest, truliaRequest} from './controllers';
 import {rejectPromise} from '../util/rejectPromise';
-const request = require('request');
+const request = require('request-promise-native');
 
 const app = express();
 
 app.set('port', 3000);
 
-app.get('/propertyPhoto/:address', realtorRequest);
-app.get('/propertyPhoto1/:address', redfinRequest);
-app.get('/propertyPhoto2/:address', truliaRequest);
+app.get('/realtor/:address', realtorRequest);
+app.get('/redfin/:address', redfinRequest);
+app.get('/trulia/:address', truliaRequest);
 
 
 function makeZillowRequest(address) {

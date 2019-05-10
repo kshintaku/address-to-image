@@ -1,6 +1,8 @@
 import {rejectPromise} from '../util/rejectPromise';
 import {serializeUrl} from '../util/serializeUrl';
-const request = require('request');
+const request = require('request-promise-native').defaults({ jar: true });
+// const cheerio = require('cheerio');
+import * as cheerio from 'cheerio';
 
 export class Redfin {
     readonly [Symbol.toStringTag]: 'Promise';
@@ -34,7 +36,9 @@ export class Redfin {
     getImage(): Promise<string> {
         if (!this.redfinImageUrl) {
             this.redfinImageUrl = this.getPropertyPageUrl()
-                .then( propertyPageUrl => this.getImageUrl(propertyPageUrl) );
+                .then( propertyPageUrl => {
+                    return this.getImageUrl(propertyPageUrl);
+                });
         }
         return this.redfinImageUrl;
     }
@@ -72,7 +76,7 @@ export class Redfin {
                 return rejectPromise('redfin is not responding');
             }
             else {
-                return rejectPromise(error.err.code);
+                return rejectPromise(error);
             }
         });
     }

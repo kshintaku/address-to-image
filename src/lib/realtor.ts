@@ -1,7 +1,7 @@
 import {serializeUrl} from '../util/serializeUrl';
 import * as cheerio from 'cheerio';
 import {rejectPromise} from '../util/rejectPromise';
-const request = require('request');
+const request = require('request-promise-native');
 
 const realObject = {
     input: '4242 Locust Ave, Long Beach, CA, 90807',

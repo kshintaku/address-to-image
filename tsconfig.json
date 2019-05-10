@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "inlineSourceMap": true,
         "module": "commonjs",
         "target": "es6",
         "noImplicitAny": false,
@@ -7,7 +8,6 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "traceResolution": false,
-        "sourceMap": true,
         "outDir": "dist",
         "baseUrl": ".",
         "rootDir": "../",

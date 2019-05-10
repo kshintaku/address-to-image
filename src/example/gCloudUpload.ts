@@ -1,6 +1,6 @@
 
 // deprecated: use as reference
-// const request = require('request').defaults({ jar: true });
+// const request = require('request-promise-native').defaults({ jar: true });
 // const { Storage } = require('@google-cloud/storage');
 // const storage = new Storage({
 //     // These variables need to change for bucket and account
