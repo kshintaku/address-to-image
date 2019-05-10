@@ -1,38 +1,24 @@
-const serializeURL = require('./util/serializeUrl');
-const redfinProcessImage = require('./controllers/redfin');
-const realtorProcessImage = require('./controllers/realtor');
-const truliaProcessImage = require('./controllers/trulia');
-const gCloudUpload = require('./util/gCloudUpload');
-
-const request = require('request').defaults({ jar: true });
-const express = require('express');
-const cheerio = require('cheerio');
-
-var app = express();
-
-var zillowAddress = '2248+w+230th';
-var realAddress = '4242%2520Locust%2520Ave%252C%2520Long%2520Beach%252C%2520CA%252C%252090807&area_types=address&area_types=neighborhood&area_types=city&area_types=county&area_types=postal_code&area_types=street';
-var homeSnapAddress = '20955 Brighton';
+import * as express from 'express';
+import * as cheerio from 'cheerio';
+import {realtorRequest, redfinRequest, truliaRequest} from './controllers';
+import {rejectPromise} from '../util/rejectPromise';
+const request = require('request-promise-native');
 
 
-app.get('/propertyPhoto/:address', redfinProcessImage);
+const app = express();
 
-app.get('/propertyPhoto1/:address', realtorProcessImage);
+app.set('port', 3000);
 
-app.get('/propertyPhoto2/:address', truliaProcessImage);
-
-app.listen(3000, function () {
-    console.log("Started on PORT 3000");
-});
+app.get('/realtor/:address', realtorRequest);
+app.get('/redfin/:address', redfinRequest);
+app.get('/trulia/:address', truliaRequest);
 
 
 function makeZillowRequest(address) {
-    // var zilUrl = 'https://www.zillow.com/search/RealEstateSearch.htm?citystatezip=';
-    var zilUrl = 'https://www.zillow.com/homes/';
-    var zilUrl = zilUrl + address + '_rb/';
+    const zilUrl = `https://www.zillow.com/homes/${address}_rb/`;
     console.log(zilUrl);
 
-    var options = {
+    const options = {
         method: 'GET',
         url: 'https://www.zillow.com/homes/2248+w+230th_rb/',
         headers:
@@ -49,24 +35,42 @@ function makeZillowRequest(address) {
         }
     };
 
-    return new Promise(resolve => {
-        request(options, function (err, response, body) {
-            // request({ url: zilUrl }, function (err, response, body) {
-            if (err) { console.log(err); return; }
-            console.log(body);
-            resolve(body);
-        })
-    }).then(body => {
-        var imgUrl = cheerio('.photo-tile-image', body).attr().src;
+
+    return request(options).then( body => {
+        const imgUrl = cheerio('.photo-tile-image', body).attr().src;
         return imgUrl;
-    })
+    }).then(body => {
+        const imgUrl = cheerio('.photo-tile-image', body).attr().src;
+        return imgUrl;
+    });
+
+    // return new Promise(resolve => {
+    //     request(options, function (err, response, body) {
+    //         // request({ url: zilUrl }, function (err, response, body) {
+    //         if (err) { console.log(err); return; }
+    //         console.log(body);
+    //         resolve(body);
+    //     })
+    // }).then(body => {
+    //     var imgUrl = cheerio('.photo-tile-image', body).attr().src;
+    //     return imgUrl;
+    // })
 }
 
 
-function makeHomeSnapRequest(address) {
-    var homeSnapUrl = 'https://www.homesnap.com/service/Misc/Search';
-    var homeSnapImgUrl = 'https://www.homesnap.com/';
-    var options = {
+function makeHomeSnapRequest(address): Promise<string> {
+    const homeSnapUrl = 'https://www.homesnap.com/service/Misc/Search';
+    let homeSnapImgUrl = 'https://www.homesnap.com/';
+
+    const body = JSON.stringify({
+        text: address,
+        polygonType: 1,
+        skip: 0,
+        take: 8,
+        submit: false
+    });
+
+    const options = {
         method: 'POST',
         url: homeSnapUrl,
         headers: {
@@ -78,27 +82,22 @@ function makeHomeSnapRequest(address) {
             'Accept-Language': 'en-US,en;q=0.9',
             Origin: 'https://www.homesnap.com'
         },
-        body: JSON.stringify({ "text": address, "polygonType": 1, "skip": 0, "take": 8, "submit": false })
+        body
     };
 
-    return new Promise(resolve => {
-        request(options, function (err, response, body) {
-            if (err) { console.log(err); return; }
-            resolve(body);
-        })
-    }).then(body => {
-        var jsonObject = JSON.parse(body);
+    return request(options).then(body => {
+        const jsonObject = JSON.parse(<any>body);
         try { homeSnapImgUrl = homeSnapImgUrl + jsonObject.d.Properties[0].Url; }
-        catch (err) { throw [404, 'address not found']; }
+        catch (err) { return rejectPromise('address not found'); }
         return homeSnapImgUrl;
-    })
+    });
 }
 
 
 // Unable to grab the image due to the HTML response not consisting of any img tags
 // Page that is returned is fairly blank with a checkbox and some buttons (check actual response)
-function getHomeSnapImgUrl(homeSnapUrl) {
-    var options = {
+function getHomeSnapImgUrl(homeSnapUrl): Promise<string> {
+    const options = {
         method: 'GET',
         url: homeSnapUrl,
         headers: {
@@ -111,15 +110,11 @@ function getHomeSnapImgUrl(homeSnapUrl) {
             Origin: 'https://www.homesnap.com'
         }
     };
-    return new Promise(resolve => {
-        request(options, function (err, response, body) {
-            console.log(response.statusCode);
-            if (err) { console.log(err); return; }
-            console.log(body);
-            resolve(body);
-        })
-    }).then(body => {
-        var imgUrl = cheerio('.listingImage large', body);
+    return request(options).then(body => {
+        const imgUrl = cheerio('.listingImage large', <any>body);
+        if (!imgUrl) { return rejectPromise('image not found'); }
         return imgUrl;
-    })
+    });
 }
+
+export = app;
