@@ -1,11 +1,13 @@
 import {rejectPromise} from '../util/rejectPromise';
 import {serializeUrl} from '../util/serializeUrl';
 const request = require('request-promise-native').defaults({ jar: true });
-// const cheerio = require('cheerio');
 import * as cheerio from 'cheerio';
 
-export class Redfin {
-    readonly [Symbol.toStringTag]: 'Promise';
+
+/*
+given a property address, the RedfinProperty object will allow you to fetch an image representation of the property
+ */
+export class RedfinProperty {
     private readonly redfinBaseObject = {
         location: '2645%20west%20231st',
         start: '0',
